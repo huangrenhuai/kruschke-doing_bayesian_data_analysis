@@ -1,0 +1,26 @@
+
+# BUGS model specification begins here...
+model {
+   for ( subjIdx in 1:nSubj ) {
+      # Likelihood:
+      z[subjIdx] ~ dbin( theta[subjIdx] , N[subjIdx] )
+      # Prior on theta: Notice nested indexing.
+      theta[subjIdx] ~ dbeta( a[cond[subjIdx]] , b[cond[subjIdx]] )
+   }
+   for ( condIdx in 1:nCond ) {
+      a[condIdx] <- mu[condIdx] * kappa[condIdx]
+      b[condIdx] <- (1-mu[condIdx]) * kappa[condIdx]
+      # Hyperprior on mu and kappa:
+      mu[condIdx] ~ dbeta( Amu , Bmu )
+      kappa[condIdx] ~ dgamma( Skappa , Rkappa )
+   }
+   # Constants for hyperprior:
+   Amu <- 1
+   Bmu <- 1
+   Skappa <- pow(meanGamma,2)/pow(sdGamma,2)
+   Rkappa <- meanGamma/pow(sdGamma,2)
+   meanGamma <- 10
+   sdGamma <- 10
+}
+# ... end BUGS model specification
+
