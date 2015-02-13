@@ -1,8 +1,11 @@
 graphics.off()
 rm(list=ls(all=TRUE))
 fileNameRoot="FilconBrugs" # for constructing output filenames
-library(BRugs)         # Kruschke, J. K. (2010). Doing Bayesian data analysis:
+library(rjags)         # Kruschke, J. K. (2010). Doing Bayesian data analysis:
                        # A Tutorial with R and BUGS. Academic Press / Elsevier.
+if ( .Platform$OS.type != "windows" ) {
+  windows <- function( ... ) X11( ... )
+}
 #------------------------------------------------------------------------------
 # THE MODEL.
 
@@ -35,7 +38,7 @@ model {
 # Write model to a file:
 writeLines(modelstring,con="model.txt")
 # Load model file into BRugs and check its syntax:
-modelCheck( "model.txt" )
+# modelCheck( "model.txt" )
 
 #------------------------------------------------------------------------------
 # THE DATA.
@@ -51,7 +54,7 @@ nSubj = length(cond)
 nCond = length(unique(cond))
 
 # Specify the data in a form that is compatible with BRugs model, as a list:
-datalist = list(
+dataList = list(
  nCond = nCond ,
  nSubj = nSubj ,
  cond = cond ,
@@ -62,7 +65,9 @@ datalist = list(
 # Get the data into BRugs:
 # Function bugsData stores the data file (default filename is data.txt).
 # Function modelData loads data file into BRugs (default filename is data.txt).
-modelData( bugsData( datalist ) )
+# uncommand the line below for BRugs, see 
+# http://doingbayesiandataanalysis.blogspot.com/2012/09/from-bugs-with-brugs-to-jags-with-rjags.html
+# modelData( bugsData( datalist ) )
 
 #------------------------------------------------------------------------------
 # INTIALIZE THE CHAINS.
