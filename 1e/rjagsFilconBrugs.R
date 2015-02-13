@@ -73,8 +73,10 @@ jags <- jags.model(file = "model.txt",
 update(jags, 1000)
 
 out <- coda.samples(model = jags, 
-                   variable.names = c("mu","kappa", "theta", "a", "b"),
+                   variable.names = c("mu","kappa", "theta"),
                    n.iter = 1000)
+
+outmatrix <- as.matrix(out)
 #------------------------------------------------------------------------------
 # INTIALIZE THE CHAINS.
 
