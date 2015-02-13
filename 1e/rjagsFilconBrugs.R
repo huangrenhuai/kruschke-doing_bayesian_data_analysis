@@ -16,7 +16,7 @@ model {
       # Likelihood:
       z[subjIdx] ~ dbin( theta[subjIdx] , N[subjIdx] )
       # Prior on theta: Notice nested indexing.
-      theta[subjIdx] ~ dbeta( a[cond[subjIdx]] , b[cond[subjIdx]] )I(0.001,0.999)
+      theta[subjIdx] ~ dbeta( a[cond[subjIdx]] , b[cond[subjIdx]] )
    }
    for ( condIdx in 1:nCond ) {
       a[condIdx] <- mu[condIdx] * kappa[condIdx]
@@ -62,95 +62,38 @@ dataList = list(
  z = z
 )
 
-# Get the data into BRugs:
-# Function bugsData stores the data file (default filename is data.txt).
-# Function modelData loads data file into BRugs (default filename is data.txt).
-# uncommand the line below for BRugs, see 
-# http://doingbayesiandataanalysis.blogspot.com/2012/09/from-bugs-with-brugs-to-jags-with-rjags.html
-# modelData( bugsData( datalist ) )
 
+# rjags to run:
+jags <- jags.model(file = "model.txt", 
+                   data = dataList,
+                   n.chains = 4,
+                   n.adapt = 100)
+
+# burning in
+update(jags, 1000)
+
+out <- coda.samples(model = jags, 
+                   variable.names = c("mu","kappa", "theta", "a", "b"),
+                   n.iter = 1000)
 #------------------------------------------------------------------------------
 # INTIALIZE THE CHAINS.
-
-nChain = 3
-modelCompile( numChains=nChain )
-
-if ( F ) {
-   modelGenInits() # often won't work for diffuse prior
-} else {
-  #  initialization based on data
-  genInitList <- function() {
-    sqzData = .01+.98*datalist$z/datalist$N
-    mu = aggregate( sqzData , list(datalist$cond) , "mean" )[,"x"]
-    sd = aggregate( sqzData , list(datalist$cond) , "sd" )[,"x"]
-    kappa = mu*(1-mu)/sd^2 - 1
-    return(
-      list(
-        theta = sqzData ,
-        mu = mu ,
-        kappa = kappa
-      )
-    )
-  }
-  for ( chainIdx in 1 : nChain ) {
-    modelInits( bugsInits( genInitList ) )
-  }
-}
 
 #------------------------------------------------------------------------------
 # RUN THE CHAINS.
 
-burninSteps = 2000
-modelUpdate( burninSteps )
-samplesSet( c("mu","kappa","theta","a","b") )
-nPerChain = ceiling(5000/nChain)
-modelUpdate( nPerChain , thin=10 )
-
-# rjags to run:
-jags <- jags.model("model.txt")
 #------------------------------------------------------------------------------
 # EXAMINE THE RESULTS.
 
 # Check for convergence, mixing and autocorrelation:
-source("plotChains.R")
-sumInfo = plotChains( "mu" , saveplots=T , fileNameRoot )
-sumInfo = plotChains( "kappa" , saveplots=F )
-sumInfo = plotChains( "theta[1]" , saveplots=F )
+
 
 # Extract parameter values and save them.
-mu = NULL
-kappa = NULL
-for ( condIdx in 1:nCond ) {
-   mu = rbind( mu , samplesSample( paste("mu[",condIdx,"]",sep="") ) )
-   kappa = rbind( kappa , samplesSample( paste("kappa[",condIdx,"]",sep="") ) )
-}
-save( mu , kappa , file=paste(fileNameRoot,"MuKappa.Rdata",sep="") )
-chainLength = NCOL(mu)
+
 
 # Histograms of mu differences:
-windows(10,2.75)
-layout( matrix(1:3,nrow=1) )
-source("plotPost.R")
-plotPost( mu[1,]-mu[2,] , xlab=expression(mu[1]-mu[2]) , main="" ,
-          breaks=20 , compVal=0 )
-plotPost( mu[3,]-mu[4,] , xlab=expression(mu[3]-mu[4]) , main="" ,
-          breaks=20 , compVal=0 )
-plotPost( (mu[1,]+mu[2,])/2 - (mu[3,]+mu[4,])/2 ,
-          xlab=expression( (mu[1]+mu[2])/2 - (mu[3]+mu[4])/2 ) ,
-          main="" , breaks=20 , compVal=0 )
-dev.copy2eps(file=paste(fileNameRoot,"MuDiffs.eps",sep=""))
+
 
 # Scatterplot of mu,kappa in each condition:
-windows()
-muLim = c(.60,1) ; kappaLim = c( 4.0 , 40 ) ; mainLab="Posterior"
-thindex = round( seq( 1 , chainLength , len=300 ) )
-plot( mu[1,thindex] , kappa[1,thindex] , main=mainLab ,
-      xlab=expression(mu[c]) , ylab=expression(kappa[c]) , cex.lab=1.75 ,
-      xlim=muLim , ylim=kappaLim , log="y" , col="red" , pch="1" )
-points( mu[2,thindex] , kappa[2,thindex] , col="blue" , pch="2" )
-points( mu[3,thindex] , kappa[3,thindex] , col="green" , pch="3" )
-points( mu[4,thindex] , kappa[4,thindex] , col="black" , pch="4" )
-dev.copy2eps(file=paste(fileNameRoot,"Scatter.eps",sep=""))
 
 
 
